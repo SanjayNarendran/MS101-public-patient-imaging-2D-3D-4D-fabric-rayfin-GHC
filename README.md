@@ -9,12 +9,26 @@ server in between.
 > **For demonstration, education and research only.** This is not a medical device and must not be used for
 > diagnosis, treatment or any clinical decision.
 >
-> **This repository hosts no data.** It contains only code. Every image is downloaded by the setup
+> **This repository hosts no data.** It contains only code, plus a few screenshots of the app for this README. Every image is downloaded by the setup
 > pipeline directly from its original public publisher (listed under [Data sources](#data-sources)),
 > under that publisher's licence, into your own Fabric Lakehouse.
 >
 > **Pull requests are welcome** to improve the viewer, the pipeline or this guide. See
 > [Contributing](#contributing).
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Pathology: invasive breast carcinoma (H&E) at 5×, with the plain-language explanation](docs/screenshots/pathology-he.jpg) | ![Pathology: 36-plex immunofluorescence of colorectal cancer, with marker switches](docs/screenshots/pathology-multiplex.jpg) |
+| **Pathology:** gigapixel H&E slide with deep zoom and a plain-language explanation | **Multiplex immunofluorescence:** one colour per protein marker, switched on and off |
+| ![3D: whole-body CT angiography with 107 labelled structures](docs/screenshots/ct-angiography-3d.jpg) | ![4D: breathing lungs rendered as glass around the tumour, airway and heart](docs/screenshots/breathing-lungs-4d.jpg) |
+| **3D:** whole-body CT angiography with 107 labelled organs, vessels and bones | **4D:** breathing lungs as glass, with the tumour, airway and heart inside |
+| ![3D: fetal face rebuilt from MRI](docs/screenshots/fetal-face-3d.jpg) | |
+| **3D:** a fetal face rebuilt from MRI | |
+
+The screenshots show public data credited under [Data attribution](#data-attribution): TCGA, HTAN (CC BY 4.0),
+TotalSegmentator (CC BY 4.0), TCIA 4D-Lung (CC BY 3.0) and the KCL craniofacial fetal MRI atlas (CC0).
 
 ## What you get
 
