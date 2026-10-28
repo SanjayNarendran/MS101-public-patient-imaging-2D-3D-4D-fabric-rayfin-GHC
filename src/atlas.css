@@ -1,0 +1,500 @@
+/*
+ * Pathology Atlas theme.
+ * Warm editorial neutrals, one saturated orange accent, Fira Sans (Condensed for display).
+ * No gradients, glows, blur or decorative motion: every rule here has a job.
+ * Light and dark share one set of semantic tokens; [data-theme] on <html> picks the values.
+ */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #faf9f5;
+  --surface: #f0eee6;
+  --well: #e9e6dc;
+  --plate: #f4f2ec;
+  --field: #ffffff;
+  --line: #dedacd;
+  --line-strong: #c9c4b4;
+  --ink: #141413;
+  --ink-2: #57564f;
+  --ink-3: #85837a;
+  /* Accent: a hotter, yellower orange than Claude's clay (#d97757). */
+  --accent: #f26419;
+  --accent-ink: #b0450a;
+  --accent-wash: #fde6d6;
+  --on-accent: #ffffff;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #1d1c1a;
+  --surface: #262522;
+  --well: #141413;
+  /* Thumbnails stay on a lit plate in dark mode, like a slide on a light box. */
+  --plate: #e6e2d8;
+  --field: #262522;
+  --line: #34332f;
+  --line-strong: #4a4843;
+  --ink: #f1efe8;
+  --ink-2: #b9b6ac;
+  --ink-3: #8a877e;
+  --accent: #f26419;
+  --accent-ink: #ff8f52;
+  --accent-wash: #4a2614;
+  --on-accent: #ffffff;
+}
+
+:root {
+  --font: 'Fira Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Fira Sans Condensed', 'Fira Sans', system-ui, sans-serif;
+  --font-mono: 'Fira Mono', ui-monospace, Menlo, monospace;
+}
+
+body.atlas {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.55;
+  font-feature-settings: 'kern' 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+body.atlas ::selection {
+  background: var(--accent-wash);
+  color: var(--ink);
+}
+
+body.atlas :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Narrow display setting for headings. */
+.t-display {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.04;
+}
+
+.t-mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  letter-spacing: -0.01em;
+}
+
+.t-label {
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+.t-muted {
+  color: var(--ink-2);
+}
+
+.t-faint {
+  color: var(--ink-3);
+}
+
+.t-accent {
+  color: var(--accent-ink);
+}
+
+.hair {
+  border-color: var(--line);
+}
+
+.link {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+
+.link:hover {
+  text-decoration-color: var(--accent);
+}
+
+/* Buttons: flat, square-ish, text-first. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  border-color: var(--ink);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  border-color: var(--line);
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 500;
+}
+
+.btn-primary:hover {
+  background: #d4520f;
+  border-color: #d4520f;
+}
+
+.btn-ink {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+  font-weight: 500;
+}
+
+.btn-ink:hover {
+  border-color: var(--ink);
+  opacity: 0.86;
+}
+
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.seg > button {
+  height: 28px;
+  padding: 0 9px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  border-left: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+
+.seg > button:first-child {
+  border-left: 0;
+}
+
+.seg > button:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.seg > button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.field {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--field);
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.field::placeholder {
+  color: var(--ink-3);
+}
+
+.field:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+/* Slide index */
+.specimen {
+  border: 1px solid var(--line);
+  background: var(--bg);
+  transition: border-color 120ms linear;
+}
+
+.specimen:hover {
+  border-color: var(--ink);
+}
+
+.specimen:hover .specimen-title {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 4px;
+}
+
+.specimen-plate {
+  background: var(--plate);
+  border-bottom: 1px solid var(--line);
+}
+
+/* Multiply drops the white-balanced thumbnail background into the plate colour. */
+.specimen-plate img {
+  mix-blend-mode: multiply;
+}
+
+/* Viewer */
+.slide-canvas {
+  background: var(--well);
+}
+
+.slide-canvas .navigator {
+  background: var(--bg) !important;
+  border: 1px solid var(--ink) !important;
+  border-radius: 0;
+  margin: 0 0 12px 12px !important;
+}
+
+.slide-pin {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transform: translate(7px, 0);
+  pointer-events: auto;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
+.slide-pin-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #faf9f5;
+  box-shadow: 0 0 0 1px #141413;
+}
+
+/* Pin labels sit on the tissue, so they keep fixed light colours in both themes. */
+.slide-pin-label {
+  font: 500 12.5px/1 var(--font);
+  color: #141413;
+  background: #faf9f5;
+  border: 1px solid #141413;
+  padding: 4px 6px;
+  white-space: nowrap;
+}
+
+.statusbar {
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+
+.scalebar {
+  height: 6px;
+  border: 1px solid var(--ink);
+  border-top: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Section tabs in the shell header. */
+.tab {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: var(--ink-2);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tab.active {
+  color: var(--ink);
+  font-weight: 500;
+  border-bottom-color: var(--accent);
+}
+
+/* Study / slide list on the left of the workspaces. */
+.list-row {
+  display: flex;
+  width: 100%;
+  gap: 10px;
+  padding: 8px 12px 8px 10px;
+  border-left: 2px solid transparent;
+  text-align: left;
+}
+
+.list-row:hover {
+  background: var(--surface);
+}
+
+.list-row[aria-current='true'] {
+  background: var(--surface);
+  border-left-color: var(--accent);
+}
+
+.list-thumb {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  object-fit: contain;
+  background: var(--plate);
+  border: 1px solid var(--line);
+  mix-blend-mode: normal;
+}
+
+.list-heading {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  padding: 14px 12px 6px;
+}
+
+/* Native range and checkbox inputs, themed. */
+.range {
+  accent-color: var(--accent);
+  height: 4px;
+}
+
+.check {
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+}
+
+.timeline-tick {
+  font-size: 11px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-tick[aria-current='true'] {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.volume-canvas {
+  background: var(--well);
+  outline: none;
+}
+
+/* Data tables on the overview page. */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--ink-3);
+  font-size: 12px;
+  padding: 8px 12px 8px 0;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.data-table td {
+  padding: 9px 12px 9px 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+/* Fluorescence slides are imaged on black. */
+.slide-canvas-dark {
+  background: #000;
+}
+
+.marker-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+.marker-chip[aria-pressed='true'] {
+  color: var(--ink);
+  border-color: var(--ink-3);
+}
+
+.marker-chip .swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  opacity: 0.35;
+}
+
+.marker-chip[aria-pressed='true'] .swatch {
+  opacity: 1;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px currentColor;
+}
+
+/* Full screen: the workspace covers the window (and the screen, where the browser allows native full screen). */
+.workspace-max {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: var(--bg);
+}
+
+.workspace-max .workspace-header {
+  display: none;
+}
+
+/* Collapsible side panels: a quiet square toggle, and a slim labelled rail when collapsed. */
+.icon-btn {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--ink-2);
+}
+
+.icon-btn:hover {
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 36px;
+  padding-top: 14px;
+  color: var(--ink-3);
+}
+
+.rail:hover {
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.rail-chevron {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.rail-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+}
