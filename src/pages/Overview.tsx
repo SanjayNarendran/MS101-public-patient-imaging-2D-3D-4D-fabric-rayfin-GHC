@@ -374,7 +374,7 @@ export function Overview() {
 
         <Section title="Notes">
           <ul className="t-muted max-w-[72ch] list-disc space-y-3 pl-5 text-[14px]">
-            <li>For demonstration and education only. Not a medical device and not for diagnosis.</li>
+            <li>For demonstration, education and research only. Not a medical device and not for diagnosis.</li>
             <li>Needs a browser with WebGL 2 (current Edge, Chrome, Safari or Firefox).</li>
             <li>
               Openly licensed 3D ultrasound of a whole fetus is not published, so the fetal studies use MRI atlases from

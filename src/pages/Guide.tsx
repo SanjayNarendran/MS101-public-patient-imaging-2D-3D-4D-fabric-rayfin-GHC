@@ -225,7 +225,7 @@ export function Guide() {
         </DocSection>
 
         <p className="t-faint hair border-t pt-6 text-[12.5px]">
-          For demonstration and education only. Not medical advice, not a medical device and not for diagnosis.
+          For demonstration, education and research only. Not medical advice, not a medical device and not for diagnosis.
         </p>
       </main>
     </div>

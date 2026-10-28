@@ -6,7 +6,7 @@ Lakehouse** in *your* workspace and stream from OneLake straight into the browse
 server in between.
 
 > [!IMPORTANT]
-> **For demonstration and education only.** This is not a medical device and must not be used for
+> **For demonstration, education and research only.** This is not a medical device and must not be used for
 > diagnosis, treatment or any clinical decision.
 >
 > **This repository hosts no data.** It contains only code. Every image is downloaded by the setup
@@ -330,4 +330,4 @@ The local backend has no Lakehouse data. Use a deployed app to see images.
 - **Fetal body:** Uus A, Aviles Verdera J, Payette K, et al. *Normative growth models for T2w 0.55T fetal brain and body MRI*. ISMRM 2024, 0819 (CC0). Organ labels: Uus AU, Hall M, et al. Sci Rep 14, 6637 (2024). https://doi.org/10.1038/s41598-024-57087-x
 - **Fetal face:** Matthew J, Uus A, De Souza L, et al. *Craniofacial phenotyping with fetal MRI*. BMC Med Imaging 24, 52 (2024). https://doi.org/10.1186/s12880-024-01230-7 (CC0).
 
-For demonstration and education only. Not a medical device and not for diagnosis.
+For demonstration, education and research only. Not a medical device and not for diagnosis.
