@@ -104,9 +104,10 @@ export function ListColumn({
   );
 }
 
-export type DetailsTab = 'about' | 'controls';
+export type DetailsTab = 'about' | 'case' | 'controls';
 const DETAILS_TABS: { id: DetailsTab; label: string }[] = [
   { id: 'about', label: 'About' },
+  { id: 'case', label: 'Case' },
   { id: 'controls', label: 'Controls' },
 ];
 
@@ -117,7 +118,7 @@ export function useDetailsPanel() {
     () => (window.innerWidth >= 1500 ? 'open' : 'closed'),
     ['open', 'closed']
   );
-  const [tab, setTab] = useStoredState<DetailsTab>('atlas.detailsTab', () => 'about', ['about', 'controls']);
+  const [tab, setTab] = useStoredState<DetailsTab>('atlas.detailsTab', () => 'about', ['about', 'case', 'controls']);
   const scrollRef = useRef<HTMLDivElement>(null);
   const open = state === 'open';
   return {
@@ -137,28 +138,44 @@ export function useDetailsPanel() {
 
 export type DetailsPanelState = ReturnType<typeof useDetailsPanel>;
 
-/** Right-hand panel with two tabs: About (the plain-language story and facts) and Controls. Collapses to a rail. */
-export function DetailsPanel({ panel, about, controls }: { panel: DetailsPanelState; about: ReactNode; controls: ReactNode }) {
+/**
+ * Right-hand panel: About (the plain-language story and facts), Case (patient record, where there is one) and
+ * Controls. Collapses to a rail.
+ */
+export function DetailsPanel({
+  panel,
+  about,
+  caseInfo,
+  controls,
+}: {
+  panel: DetailsPanelState;
+  about: ReactNode;
+  caseInfo?: ReactNode;
+  controls: ReactNode;
+}) {
   if (!panel.open) return <Rail side="right" label="Details" onOpen={() => panel.setOpen(true)} />;
+  const tabs = DETAILS_TABS.filter((t) => t.id !== 'case' || caseInfo);
+  const active = tabs.some((t) => t.id === panel.tab) ? panel.tab : 'about';
   const onKey = (e: KeyboardEvent) => {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-    const next = DETAILS_TABS[(DETAILS_TABS.findIndex((t) => t.id === panel.tab) + 1) % DETAILS_TABS.length];
+    const i = tabs.findIndex((t) => t.id === active);
+    const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
     panel.setTab(next.id);
     document.getElementById(`details-tab-${next.id}`)?.focus();
   };
   return (
     <aside className="hair flex w-[330px] shrink-0 flex-col border-l" aria-label="Details">
       <div className="hair flex h-11 shrink-0 items-stretch gap-5 border-b pl-5 pr-3" role="tablist" aria-label="Details" onKeyDown={onKey}>
-        {DETAILS_TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.id}
             id={`details-tab-${t.id}`}
             type="button"
             role="tab"
-            aria-selected={panel.tab === t.id}
+            aria-selected={active === t.id}
             aria-controls="details-tabpanel"
-            tabIndex={panel.tab === t.id ? 0 : -1}
-            className={`tab ${panel.tab === t.id ? 'active' : ''}`}
+            tabIndex={active === t.id ? 0 : -1}
+            className={`tab ${active === t.id ? 'active' : ''}`}
             onClick={() => panel.setTab(t.id)}
           >
             {t.label}
@@ -179,10 +196,10 @@ export function DetailsPanel({ panel, about, controls }: { panel: DetailsPanelSt
         ref={panel.scrollRef}
         id="details-tabpanel"
         role="tabpanel"
-        aria-labelledby={`details-tab-${panel.tab}`}
+        aria-labelledby={`details-tab-${active}`}
         className="min-h-0 flex-1 overflow-y-auto"
       >
-        {panel.tab === 'about' ? about : controls}
+        {active === 'about' ? about : active === 'case' ? caseInfo : controls}
       </div>
     </aside>
   );

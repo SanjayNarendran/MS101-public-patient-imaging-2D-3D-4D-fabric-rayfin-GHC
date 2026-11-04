@@ -4,6 +4,7 @@ import { Wordmark } from '@/components/Wordmark';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { MockSignInDialog } from '@/components/MockSignInDialog';
 import { useAuth } from '@/hooks/AuthContext';
+import { LOCAL_DATA } from '@/lib/localData';
 
 export function AuthPage() {
   const { signInWithFabric, signInLocally, fabricAuthEnabled } = useAuth();
@@ -64,7 +65,9 @@ export function AuthPage() {
     ? fabricAuthEnabled
       ? 'Opening Microsoft sign-in…'
       : 'Signing in…'
-    : 'Sign in with Microsoft';
+    : LOCAL_DATA
+      ? 'Open the viewer'
+      : 'Sign in with Microsoft';
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -77,8 +80,9 @@ export function AuthPage() {
         <div className="mx-auto w-full max-w-[440px]">
           <h1 className="t-display text-[40px]">Sign in to the atlas</h1>
           <p className="t-muted mt-4 text-[14px]">
-            The slides are stored in a Microsoft Fabric workspace. Use the Microsoft account you sign in
-            to Fabric with.
+            {LOCAL_DATA
+              ? 'Running in local mode: images are read from the work/ folder on this computer. No sign-in or Fabric capacity is needed.'
+              : 'The slides are stored in a Microsoft Fabric workspace. Use the Microsoft account you sign in to Fabric with.'}
           </p>
           <button
             type="button"
@@ -86,7 +90,7 @@ export function AuthPage() {
             disabled={isLoading}
             className="btn btn-ink mt-8 h-11 w-full justify-center text-[13px]"
           >
-            {msLogo}
+            {!LOCAL_DATA && msLogo}
             {buttonLabel}
           </button>
           {error && <p className="t-accent mt-3 text-[12px]">{error}</p>}

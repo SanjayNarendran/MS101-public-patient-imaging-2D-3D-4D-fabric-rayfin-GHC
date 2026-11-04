@@ -131,7 +131,7 @@ export const SLIDE_NOTES: Record<string, ImageNote> = {
   },
   'colon-cycif': {
     plain:
-      'The same kind of bowel cancer as the colon H&E slide, imaged a different way. Instead of two dyes, the tissue was stained in rounds with antibodies, each of which sticks to one protein and carries a fluorescent tag. The microscope photographed every protein separately, 36 in all. Each one is a marker, shown here in its own colour on black and switched on or off like layers on a map.',
+      'The same kind of bowel cancer as the colon H&E slide, imaged a different way. Instead of two dyes, the tissue was stained in rounds with antibodies, each of which sticks to one protein and carries a fluorescent tag. The microscope photographed each stain separately: 36 channels covering 23 proteins, plus the DNA stain in every round and background controls. Each protein is a marker, shown in its own colour on black and switched on or off like layers on a map.',
     lookFor: [
       'Switch everything off except DNA: each blue dot is the nucleus of one cell.',
       'Add Pan-cytokeratin (yellow) to see the tumour glands, then SMA (pink) for the muscle and support tissue around them.',
@@ -198,10 +198,117 @@ export const MARKER_NOTES: Record<string, { name: string; shows: string; why: st
     shows: 'The cells that line blood vessels (endothelium).',
     why: 'Shows the tumour’s blood supply.',
   },
+  cd3: {
+    name: 'CD3',
+    shows: 'A protein on every T cell, the immune cells that recognise specific targets.',
+    why: 'Counts all the T cells; CD4 and CD8a then show which kind they are.',
+  },
+  cd4: {
+    name: 'CD4',
+    shows: 'Helper T cells, which coordinate the immune response.',
+    why: 'Helper T cells direct killer T cells and other immune cells against the tumour.',
+  },
+  cd20: {
+    name: 'CD20',
+    shows: 'B cells, the immune cells that make antibodies.',
+    why: 'Clusters of B cells near a tumour (tertiary lymphoid structures) are linked to a better outlook.',
+  },
+  cd45ro: {
+    name: 'CD45RO',
+    shows: 'Memory T cells, which have met their target before.',
+    why: 'Many memory T cells in bowel cancer are linked to a lower chance of the cancer coming back.',
+  },
+  cd163: {
+    name: 'CD163',
+    shows: 'A type of macrophage (M2) that dampens inflammation and helps tissue repair.',
+    why: 'In tumours these macrophages often help the cancer grow and hide from the immune system.',
+  },
+  foxp3: {
+    name: 'FOXP3',
+    shows: 'Regulatory T cells, which calm the immune system down.',
+    why: 'They protect against autoimmunity, but in tumours they can stop other T cells attacking the cancer.',
+  },
+  'pd-1': {
+    name: 'PD-1',
+    shows: 'A “brake” receptor on T cells that have been switched off by long exposure to the tumour.',
+    why: 'Checkpoint-inhibitor drugs block PD-1 to release this brake.',
+  },
+  'pd-l1': {
+    name: 'PD-L1',
+    shows: 'The partner of PD-1, made by some tumour and immune cells.',
+    why: 'It switches T cells off; how much tumour cells make helps decide who receives immunotherapy.',
+  },
+  'e-cadherin': {
+    name: 'E-cadherin',
+    shows: 'The “glue” that holds epithelial cells together at their junctions.',
+    why: 'Cancer cells that lose it can break away and spread.',
+  },
+  vimentin: {
+    name: 'Vimentin',
+    shows: 'A structural protein in connective-tissue cells and some immune cells.',
+    why: 'Marks the stroma around the tumour, and tumour cells that are becoming more mobile.',
+  },
+  'cdx-2': {
+    name: 'CDX-2',
+    shows: 'A protein in the nucleus of intestinal cells that keeps them behaving like bowel cells.',
+    why: 'Confirms the tumour came from the bowel; tumours that lose it tend to be more aggressive.',
+  },
+  'na-k-atpase': {
+    name: 'Na/K ATPase',
+    shows: 'A pump in the outer membrane of almost every cell.',
+    why: 'Outlines each cell, so software can measure cell shapes and count markers cell by cell.',
+  },
+  'lamin-a-b-c': {
+    name: 'Lamin A/B/C',
+    shows: 'The scaffold lining the inside of the nucleus.',
+    why: 'Outlines each nucleus; its shape and integrity change in many cancers.',
+  },
+  desmin: {
+    name: 'Desmin',
+    shows: 'A muscle protein.',
+    why: 'Shows the muscle layers of the bowel wall, and how deep the tumour has grown into them.',
+  },
+  pcna: {
+    name: 'PCNA',
+    shows: 'A protein that helps copy DNA, found in cells that are dividing or repairing their DNA.',
+    why: 'Like Ki-67, it shows how actively the tumour is growing.',
+  },
+  'antigen-ki67-2': {
+    name: 'Ki-67 (second stain)',
+    shows: 'Ki-67 again, stained in a later imaging round.',
+    why: 'Repeating a marker checks that the staining is reliable across rounds.',
+  },
+  collagen: {
+    name: 'Collagen',
+    shows: 'Collagen fibres, the main structural protein of connective tissue.',
+    why: 'Shows the scar-like tissue (desmoplasia) that bowel cancers often build around themselves.',
+  },
 };
 
+/** Plain-language note for a marker channel, including the repeated DNA rounds and background controls. */
+export function markerNote(id: string, name: string): { name: string; shows: string; why: string } | undefined {
+  if (MARKER_NOTES[id]) return MARKER_NOTES[id];
+  const dna = /^dna-(\d+)$/.exec(id);
+  if (dna) {
+    return {
+      name: `DNA, round ${dna[1]}`,
+      shows: `The nuclei again, stained at the start of imaging round ${dna[1]}.`,
+      why: 'Each round re-stains DNA so the images from every round can be lined up exactly.',
+    };
+  }
+  const control = /^control-(\d+)nm$/.exec(id);
+  if (control) {
+    return {
+      name: `Control, ${control[1]} nm`,
+      shows: `The faint natural glow of the tissue at ${control[1]} nm, imaged with no antibody.`,
+      why: 'Shows the background level, so real staining can be told apart from the tissue’s own glow.',
+    };
+  }
+  return name ? { name, shows: name, why: '' } : undefined;
+}
+
 export const MULTIPLEX_BASICS =
-  'A marker is one protein made visible. The tissue is treated with an antibody that sticks only to that protein and carries a dye that glows under a particular light. Cyclic immunofluorescence (CyCIF) repeats this in rounds, photographing a few markers at a time and then bleaching them, until dozens of proteins have been recorded on the same slice. 36-plex means 36 proteins were measured; eight of the most informative are shown here. Each marker chip switches one protein on or off, so you can see which cells are tumour, which are immune cells, and where they meet.';
+  'A marker is one protein made visible. The tissue is treated with an antibody that sticks only to that protein and carries a dye that glows under a particular light. Cyclic immunofluorescence (CyCIF) repeats this in rounds, photographing a few markers at a time and then bleaching them, until dozens of proteins have been recorded on the same slice. This slide has 36 channels: 24 antibody stains (23 different proteins, with Ki-67 stained twice), the DNA stain repeated in each of the nine rounds (to line the rounds up), and three background controls. The eight most informative markers are the chips above the viewer; Details › Controls lists all 36. Each switch turns one channel on or off, so you can see which cells are tumour, which are immune cells, and where they meet.';
 
 export const STUDY_NOTES: Record<string, ImageNote> = {
   'petct-whole-body': {
@@ -332,13 +439,19 @@ export const PATHOLOGY_BASICS = [
 ];
 
 export const PATHOLOGY_CONTROLS: Term[] = [
-  { term: 'Slide list', text: 'Every slide in the Lakehouse. The small text gives the organ, the scanner’s lens power (20× or 40×) and the image size in gigapixels (billions of pixels). Type to search by organ or diagnosis. The ‹ button folds the list into a slim strip to give the image more room; click the strip to bring it back.' },
+  { term: 'Slide list', text: 'Every slide in the Lakehouse. Each entry starts with the patient code (MRN), the type of study (SM slide images, ANN AI annotations) and the study date, exactly as the Pathology (OHIF) study list shows them, so you can find the same case in both tabs. Below them: the diagnosis, the organ, the scanner’s lens power (20× or 40×) and the image size in gigapixels (billions of pixels). Type to search by patient code, organ or diagnosis. The ‹ button folds the list into a slim strip to give the image more room; click the strip to bring it back.' },
   { term: '1.25× to 40×', text: 'Jump to what a microscope lens of that power would show. The live magnification is shown at the bottom left.' },
   { term: 'Tour', text: 'Flies automatically through the most cell-dense areas of the slide, found by the image pipeline. Dense areas are usually tumour.' },
   { term: 'Fit', text: 'Shows the whole slide again.' },
   { term: 'Copy link', text: 'Copies a link to exactly this slide, position and zoom, to send to someone else.' },
   { term: 'Full screen', text: 'Fills the window with the viewer and its controls, and the whole screen where the browser allows it. Press Esc or Exit full screen to leave.' },
-  { term: 'Details panel', text: 'The panel on the right has two tabs. About tells the story of the slide in plain words, with specimen facts and where the files are stored. Controls holds the marker switches (fluorescence slides) and shared pins. The › button folds it into a strip; In plain words under the title opens it on About.' },
+  { term: 'Details panel', text: 'The panel on the right has up to three tabs. About tells the story of the slide in plain words, with specimen facts and where the files are stored. Case holds the patient record, tumour genes and the report (H&E slides). Controls holds the AI layers, what to show on screen, the marker switches (fluorescence slides) and shared pins. The › button folds it into a strip; In plain words under the title opens it on About.' },
+  { term: 'Patient banner', text: 'The strip above the toolbar: case code, sex, age at diagnosis, diagnosis, stage and the key gene changes, as on a hospital imaging system. Click it for the full record.' },
+  { term: 'Compare', text: 'Splits the viewer in two and shows a second slide from the same patient on the right, such as normal tissue next to the tumour. Link views moves both together. Choose the same slide on the right and tick AI layers there to see exactly what the AI marked.' },
+  { term: 'Report', text: 'Opens the patient’s original pathology report beside the slide, page by page, with zoom and download.' },
+  { term: 'AI buttons', text: 'Nuclei outlines every cell nucleus found by an AI model; Immune cells shows a heat map of where immune cells have entered the tissue. Opacity and explanations are in Details › Controls.' },
+  { term: 'Slides from this patient', text: 'The filmstrip under the viewer lists every slide published for the patient: diagnostic slides, frozen sections from the sequenced sample and sometimes normal tissue. Click one to view it; ⇆ shows it beside the current slide.' },
+  { term: 'Show on screen', text: 'In Details › Controls. Switch off the patient banner, filmstrip, AI buttons, report or Case tab for a cleaner screen; Show all brings them back. The choice is remembered.' },
   { term: 'Markers', text: 'Fluorescence slides only. Each chip is one protein in its own colour; click it to switch it on or off. All shows every marker; reset returns to the starting set.' },
   { term: 'Minimap', text: 'The small picture in the corner shows the whole slide; the orange box is the part you are looking at. Click it to jump.' },
   { term: 'Scale bar', text: 'A real-world ruler for the current zoom. 100 µm is 0.1 mm, about the width of a human hair.' },
@@ -364,7 +477,7 @@ export const VOLUME_CONTROLS: Term[] = [
   { term: 'Reset', text: 'Returns to the starting viewpoint and zoom.' },
   { term: 'Save image', text: 'Downloads a picture of the current view.' },
   { term: 'Full screen', text: 'Fills the window with the viewer and its controls, and the whole screen where the browser allows it. Press Esc or Exit full screen to leave.' },
-  { term: 'Study list', text: 'Every study on the tab, grouped by body area. The ‹ button folds the list into a slim strip; click the strip to bring it back.' },
+  { term: 'Study list', text: 'Every study on the tab, grouped by body area. Studies that also open as original DICOM in the 3D/4D (OHIF) tab (the PET/CT and the 4D lung CT) start with the patient, the type of study (CT, PT for PET, SEG segmentations, RTSTRUCT radiotherapy structures) and the study date, exactly as its study list shows them, so you can find the same scan in both tabs. The ‹ button folds the list into a slim strip; click the strip to bring it back.' },
   { term: 'Details panel', text: 'The panel on the right has two tabs. About explains the study in plain words, with its facts, source, licence and storage. Controls holds the layers and a summary of the current view. The › button folds it into a strip; In plain words under the title opens it on About.' },
   { term: 'Play and timeline', text: 'For studies that change over time: a heartbeat, a breath or weeks of pregnancy. Play runs through them; drag the slider or click a number to pick one moment.' },
   { term: 'Layers', text: 'In Details › Controls. A study can stack several images, such as a CT with PET or coloured outlines on top. The tick box shows or hides each one, the slider makes it more or less see-through, and the legend names the colours.' },
@@ -454,6 +567,25 @@ export const GLOSSARY: Term[] = [
   { term: 'DICOM, NIfTI, SVS', text: 'File formats: DICOM is the hospital standard for scans, NIfTI a research format for 3D volumes, and SVS a scanner format for slides.' },
 ];
 
+export const OHIF_BASICS = [
+  'Hospitals keep images in DICOM, the medical imaging standard: each file carries the pixels and the facts about them (patient, scanner, slice position, stain). The Pathology and 3D and 4D imaging tabs convert images into web-friendly copies first. The two OHIF tabs do not: they open the original DICOM files, exactly as the NCI Imaging Data Commons publishes them.',
+  'The viewer is OHIF, the open-source viewer behind many research and some commercial clinical systems, with its slide viewer (dicom-microscopy-viewer). Normally OHIF needs a DICOMweb server between it and the files. Here a small Rayfin extension reads the files straight from OneLake instead: a short-lived, read-only link from a Rayfin function, a JSON index of studies and series, and, for slides, one HTTP range request per tile into the original file.',
+  'OHIF is a research and teaching viewer, not a cleared medical device, and neither is this app.',
+];
+
+export const OHIF_TERMS: Term[] = [
+  { term: 'Study list', text: 'The worklist, as on a hospital system: one row per study (one visit or examination) with patient code, date, modalities, description and number of images. Click a row to preview its series, then choose a workflow to open it; type in a column header to filter.' },
+  { term: 'Workflows (modes)', text: 'Basic Viewer: slices, measurements, MPR and 3D. Segmentation: for studies with organ or tumour outlines. Total Metabolic Tumor Volume: PET/CT fusion with a PET MIP and SUV, for the PET/CT study. Microscopy: whole-slide images and their annotations.' },
+  { term: 'Study browser', text: 'The panel on the left lists every series in the study with a thumbnail. Drag or double-click a series to show it. Segmentations (SEG) and radiotherapy structures (RTSTRUCT) open on top of the scan they belong to after you confirm.' },
+  { term: 'Toolbar', text: 'Window level (contrast), pan, zoom, measure, crosshairs, layouts (one to several viewports, MPR and 3D), rotate, flip, cine and capture. Hover over any tool for its name.' },
+  { term: 'Segmentations', text: 'Outlines saved as DICOM: 81 organs, bones and muscles from TotalSegmentator on the chest CT, brain tumour regions on the MRI, prostate zones on the prostate MRI, lesions on the PET/CT, and radiotherapy structures (lungs, heart, tumour) on the 4D CT. The Segmentation panel shows, hides and recolours each one.' },
+  { term: 'Breathing phases', text: 'Added for this app. Respiratory-gated CT stores each phase of a breath as its own series, which OHIF cannot play as a film. When a study has such phases, a bar appears at the bottom: Play loops them at the current slice, so you can watch the lungs and diaphragm move.' },
+  { term: 'Crop 3D', text: 'Added for this app. In a layout with a 3D view (Layout › 3D four up), Crop 3D puts a box around the 3D image with a handle on each face and corner: drag a handle to cut away tissue and look inside, drag elsewhere to turn the image, Shift-drag to tilt the box. The slice views show the box edges as coloured lines, which you can drag too. Press Crop 3D again to put the whole image back.' },
+  { term: 'Slides and annotations', text: 'In Microscopy, scroll to zoom and drag to pan, like the Pathology tab. Each patient study holds all of that patient’s slides; pick one in the study browser. Double-click the annotation series (ANN) to draw the AI nucleus outlines: counts at low zoom, outlines when zoomed in.' },
+  { term: 'Channels', text: 'Added for this app. On the 36-channel fluorescence slide, the Channels box at the top right switches markers on and off. It starts with the same four markers and colours as the Pathology tab.' },
+  { term: 'Not shown here', text: 'The immune-cell (TIL) maps, published only as DICOM segmentations, which OHIF’s slide viewer does not draw; they are in the Pathology tab. Studies whose source is not DICOM (CT angiography, Visible Human, fetal atlases, tractography) stay in the 3D and 4D imaging tab rather than being converted into DICOM.' },
+];
+
 /** Short hover text for toolbar controls. */
 export const TIPS = {
   magnification: (m: number) => `Show what a ${m}× microscope lens would show`,
@@ -464,6 +596,9 @@ export const TIPS = {
   exitFullScreen: 'Back to the normal layout (or press Esc)',
   markersAll: 'Show every marker',
   markersReset: 'Back to the starting set of markers',
+  compare: 'Show a second slide from this patient beside this one',
+  report: 'Show the original pathology report beside the slide',
+  linkViews: 'Pan and zoom both slides together',
   clip: 'Cut away part of the volume to see inside',
   clipFace: 'Direction of the cut',
   clipDepth: 'Move the cut through the body',

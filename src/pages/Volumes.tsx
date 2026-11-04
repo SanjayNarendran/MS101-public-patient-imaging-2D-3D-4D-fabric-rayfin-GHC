@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { PlainWords, PlainWordsLink } from '@/components/PlainWords';
 import { MIP_COLORMAPS, MipViewer, type MipColormap } from '@/components/MipViewer';
 import { DetailsPanel, ListColumn, PanelRow, PanelSection, useDetailsPanel, WorkspaceHeader } from '@/components/Panel';
+import { OhifStudyRowText } from '@/components/OhifStudyRow';
 import {
   VolumeViewer,
   type ClipSetting,
@@ -96,7 +97,10 @@ export function Volumes() {
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
     const match = (s: VolumeStudy) =>
-      !q || [s.title, s.subtitle, s.modality, s.category, s.subject].some((v) => v.toLowerCase().includes(q));
+      !q ||
+      [s.title, s.subtitle, s.modality, s.category, s.subject, s.study?.patientId ?? '', s.study?.patientName ?? ''].some((v) =>
+        v.toLowerCase().includes(q)
+      );
     const out = new Map<string, VolumeStudy[]>();
     for (const s of studies.filter(match)) out.set(s.category, [...(out.get(s.category) ?? []), s]);
     return [...out.entries()];
@@ -142,10 +146,14 @@ export function Volumes() {
                   onClick={() => setParams({ study: s.id })}
                 >
                   <img src={volumeUrl(catalog.access, s.thumbnail)} alt="" className="list-thumb" loading="lazy" />
-                  <span className="min-w-0">
-                    <span className="block text-[13.5px] font-medium leading-snug">{s.title}</span>
-                    <span className="t-faint block truncate text-[11.5px]">{s.modality}</span>
-                  </span>
+                  {s.study ? (
+                    <OhifStudyRowText study={s.study} tab="3D/4D (OHIF)" title={s.title} description={s.modality} />
+                  ) : (
+                    <span className="min-w-0">
+                      <span className="block text-[13.5px] font-medium leading-snug">{s.title}</span>
+                      <span className="t-faint block truncate text-[11.5px]">{s.modality}</span>
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -491,9 +499,11 @@ function StudyWorkspace({ study, catalog }: { study: VolumeStudy; catalog: Volum
                       </span>
                     </PanelRow>
                   </dl>
-                  <a href={catalog.lakehouse.portalUrl} target="_blank" rel="noreferrer" className="link mt-3 inline-block text-[12.5px]">
-                    Open in Fabric ↗
-                  </a>
+                  {catalog.lakehouse.portalUrl && (
+                    <a href={catalog.lakehouse.portalUrl} target="_blank" rel="noreferrer" className="link mt-3 inline-block text-[12.5px]">
+                      Open in Fabric ↗
+                    </a>
+                  )}
                 </PanelSection>
             </>
           }

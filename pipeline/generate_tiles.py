@@ -7,14 +7,20 @@ Output layout (mirrors what is uploaded to the Lakehouse `Files/` area):
     <out>/slides/<id>/slide_files/<level>/<col>_<row>.jpg
     <out>/slides/<id>/thumbnail.jpg
     <out>/slides/<id>/label.json   (per-slide metadata)
+    <out>/slides/<id>/case.json    (optional, from build_cases.py; merged into the manifest as caseInfo)
+
+When pipeline/dicom/build_dicom.py has run, each slide also gets `study`: its DICOM study in the Pathology (OHIF) tab
+(patient code, date, type), so the Pathology tab lists slides the way the OHIF study list does.
 
 Usage: python pipeline/generate_tiles.py --raw work/raw --out work/lakehouse [--only brain-gbm]
+       python pipeline/generate_tiles.py --only none   # rebuild the manifest only
 """
 import argparse
 import json
 import multiprocessing as mp
 import os
 import pathlib
+import sys
 import time
 
 import numpy as np
@@ -23,6 +29,8 @@ from openslide.deepzoom import DeepZoomGenerator
 from PIL import Image
 
 HERE = pathlib.Path(__file__).parent
+sys.path.insert(0, str(HERE / "dicom"))
+from study_refs import load_studies, match_study, study_ref  # noqa: E402
 TILE_SIZE = 1022  # + 2 * overlap = 1024 px tiles
 OVERLAP = 1
 QUALITY = 82
@@ -141,10 +149,25 @@ def process(slide: dict, raw: pathlib.Path, out: pathlib.Path, workers: int) -> 
     return entry
 
 
+def attach_dicom_studies(entries: list[dict], studies_file: pathlib.Path) -> None:
+    """Adds each slide's DICOM study from the OHIF pathology index, matched on the patient code (`case`)."""
+    studies = load_studies(studies_file)
+    if not studies:
+        return
+    matched = 0
+    for entry in entries:
+        study = match_study(studies, entry.get("case"))
+        if study:
+            entry["study"] = study_ref(study)
+            matched += 1
+    print(f"DICOM studies: {matched} of {len(entries)} slides matched")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--raw", default=str(HERE.parent / "work" / "raw"))
     ap.add_argument("--out", default=str(HERE.parent / "work" / "lakehouse"))
+    ap.add_argument("--dicom", default=str(HERE.parent / "work" / "dicom"))
     ap.add_argument("--only", nargs="*")
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 4) - 2))
     args = ap.parse_args()
@@ -167,6 +190,14 @@ def main() -> None:
         extra = json.loads(label.read_text())
         if extra["id"] not in known:
             entries.append(extra)
+
+    # Case context (patient, genomics, report, other slides, AI overlays) from build_cases.py.
+    for entry in entries:
+        case = out / "slides" / entry["id"] / "case.json"
+        if case.exists():
+            entry["caseInfo"] = json.loads(case.read_text())
+
+    attach_dicom_studies(entries, pathlib.Path(args.dicom) / "pathology" / "studies.json")
 
     manifest = {
         "title": "Rayfin Digital Pathology Atlas",

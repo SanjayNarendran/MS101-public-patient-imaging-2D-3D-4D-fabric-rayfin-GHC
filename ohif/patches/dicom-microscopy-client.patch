@@ -1,0 +1,19 @@
+diff --git a/extensions/dicom-microscopy/src/utils/dicomWebClient.ts b/extensions/dicom-microscopy/src/utils/dicomWebClient.ts
+index b6a9da9..1202c46 100644
+--- a/extensions/dicom-microscopy/src/utils/dicomWebClient.ts
++++ b/extensions/dicom-microscopy/src/utils/dicomWebClient.ts
+@@ -10,6 +10,14 @@ import { StaticWadoClient } from '@ohif/extension-default';
+  * @returns
+  */
+ export default function getDicomWebClient({ extensionManager, servicesManager }: withAppTypes) {
++  // Rayfin: a data source can supply its own slide client (e.g. range reads of DICOM files in OneLake),
++  // so the viewer needs no DICOMweb server.
++  const activeDataSource = extensionManager.getActiveDataSource?.()?.[0];
++  const customClient = activeDataSource?.retrieve?.microscopyClient?.();
++  if (customClient) {
++    return customClient;
++  }
++
+   const dataSourceConfig = window.config.dataSources.find(
+     ds => ds.sourceName === extensionManager.activeDataSourceName
+   );

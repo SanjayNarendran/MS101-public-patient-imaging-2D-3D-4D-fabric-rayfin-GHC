@@ -46,3 +46,7 @@ fabric.env
 .venv
 work/
 __pycache__/
+
+# OHIF Viewer build (ohif/build.mjs): the OHIF source checkout and its output
+ohif/.build/
+public/ohif/

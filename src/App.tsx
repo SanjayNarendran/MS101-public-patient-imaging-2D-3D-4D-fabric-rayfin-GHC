@@ -12,6 +12,7 @@ import { AuthPage } from '@/components/AuthPage';
 import { useAuth } from '@/hooks/AuthContext';
 import { AuthCallback } from '@/pages/AuthCallback.tsx';
 import { Guide } from '@/pages/Guide';
+import { OhifViewer } from '@/pages/OhifViewer';
 import { Overview } from '@/pages/Overview';
 import { Pathology } from '@/pages/Pathology';
 import { Volumes } from '@/pages/Volumes';
@@ -118,6 +119,8 @@ function App() {
           <Route index element={<OverviewOrLegacySlide />} />
           <Route path="pathology" element={<Pathology />} />
           <Route path="volumes" element={<Volumes />} />
+          <Route path="pathology-ohif" element={<OhifViewer key="pathology" dataset="pathology" />} />
+          <Route path="imaging-ohif" element={<OhifViewer key="radiology" dataset="radiology" />} />
           <Route path="guide" element={<Guide />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

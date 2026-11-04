@@ -1,6 +1,9 @@
 import { type RayfinRuntimeConfig } from '@microsoft/rayfin-client';
 
+import { LOCAL_DATA } from '@/lib/localData';
+
 import { IAuthService } from './interfaces/IAuthService';
+import { LocalDataAuthService } from './local/LocalDataAuthService';
 import { MockAuthService } from './mock/MockAuthService';
 import { RayfinAuthService } from './rayfin/RayfinAuthService';
 import { RayfinClientService } from './rayfin/RayfinClientService';
@@ -53,7 +56,9 @@ export class ServiceContainer {
 
       let authService: IAuthService;
 
-      if (localDev) {
+      if (LOCAL_DATA) {
+        authService = new LocalDataAuthService();
+      } else if (localDev) {
         authService = new MockAuthService();
       } else {
         const resolved = rayfinClientService.getClient().runtimeConfig ?? {};

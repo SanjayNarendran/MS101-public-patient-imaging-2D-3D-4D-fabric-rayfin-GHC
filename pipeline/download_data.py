@@ -1,16 +1,16 @@
-"""Download the public source datasets for the 3D/4D studies and the multiplex slide into work/.
+"""Download the public source datasets for the 3D/4D studies into work/.
 
-    python pipeline/download_data.py all                 # everything below (about 25 GB)
+    python pipeline/download_data.py all                 # everything below (about 18 GB)
     python pipeline/download_data.py petct lung4d fetal  # or pick datasets
 
 Nothing here is redistributed by this repository: every file comes straight from its original
 publisher, under that publisher's licence (see README, "Data sources"). The TCGA H&E slides have
-their own script (pipeline/download_slides.py) and TotalSegmentator is fetched by its builder.
+their own script (pipeline/download_slides.py), TotalSegmentator is fetched by its builder, and the
+multiplex (CyCIF) slide and the OHIF tabs' DICOM come from pipeline/dicom/download_dicom.py.
 
 Datasets (name: source -> folder, approximate size):
   petct      NCI Imaging Data Commons, TCIA FDG-PET-CT-Lesions (CC BY 4.0)      -> work/petct/study       0.3 GB
   lung4d     NCI Imaging Data Commons, TCIA 4D-Lung (CC BY 3.0)                 -> work/lung4d/dicom      0.8 GB
-  multiplex  NCI Imaging Data Commons, HTAN HMS CyCIF (CC BY 4.0), 8 markers    -> work/mif               2.9 GB
   vhp        U.S. NLM Visible Human Female, cryosection PNGs (public domain)    -> work/vhp/png          16.5 GB
   tracts     HCP1065 tractography atlas (CC BY-SA 4.0) + TemplateFlow template  -> work/tracts            0.6 GB
   fetal      King's College London fetal MRI atlases on G-Node GIN (CC0):
@@ -19,7 +19,6 @@ Downloads resume: files that already exist with a non-zero size are skipped.
 """
 import argparse
 import concurrent.futures as cf
-import json
 import pathlib
 import shutil
 import sys
@@ -51,17 +50,6 @@ LUNG4D_SERIES = [
     "1.3.6.1.4.1.14519.5.2.1.6834.5010.334245065657098504984831070956",
 ] + [f"2.25.5618076857306634880164728989441809423.{i}" for i in range(1, 11)]
 
-# HTAN HMS CyCIF slide HTA7_920_1000: the 1.3 um/pixel (12,460 px wide) pyramid level of the 8 markers shown.
-MULTIPLEX_SOP = {
-    "DNA": "1.3.6.1.4.1.5962.99.1.2343322182.1764456793.1655905763910.17.0",
-    "Pan-cytokeratin": "1.3.6.1.4.1.5962.99.1.2343322182.1764456793.1655905763910.437.0",
-    "Aortic smooth muscle actin": "1.3.6.1.4.1.5962.99.1.2343322182.1764456793.1655905763910.479.0",
-    "CD45": "1.3.6.1.4.1.5962.99.1.2343322182.1764456793.1655905763910.605.0",
-    "CD8a": "1.3.6.1.4.1.5962.99.1.2343322182.1764456793.1655905763910.815.0",
-    "CD68": "1.3.6.1.4.1.5962.99.1.2343322182.1764456793.1655905763910.773.0",
-    "Antigen Ki67": "1.3.6.1.4.1.5962.99.1.2343322182.1764456793.1655905763910.395.0",
-    "CD31": "1.3.6.1.4.1.5962.99.1.2343322182.1764456793.1655905763910.1319.0",
-}
 
 VHP_BASE = "https://data.lhncbc.nlm.nih.gov/public/Visible-Human/Female-Images/PNG_format"
 HCP1065_ZIP = "https://github.com/frankyeh/data-atlas/releases/download/hcp1065/hcp1065_avg_tracts_trk.zip"
@@ -114,24 +102,6 @@ def lung4d() -> None:
                                   dirTemplate="%Modality_%SeriesInstanceUID")
 
 
-def multiplex() -> None:
-    import pydicom
-
-    out = WORK / "mif" / "level4"
-    out.mkdir(parents=True, exist_ok=True)
-    client = idc()
-    client.fetch_index("sm_instance_index")
-    print(f"multiplex: {len(MULTIPLEX_SOP)} marker images from IDC (about 360 MB each)", flush=True)
-    client.download_from_selection(downloadDir=str(out), sopInstanceUID=list(MULTIPLEX_SOP.values()), dirTemplate=None)
-    by_uid = {}
-    for f in out.rglob("*.dcm"):
-        by_uid[pydicom.dcmread(f, stop_before_pixels=True).SOPInstanceUID] = f.relative_to(out.parent).as_posix()
-    missing = [n for n, uid in MULTIPLEX_SOP.items() if uid not in by_uid]
-    if missing:
-        raise SystemExit(f"multiplex: not downloaded: {missing}")
-    (WORK / "mif" / "level4_channels.json").write_text(
-        json.dumps({n: by_uid[uid] for n, uid in MULTIPLEX_SOP.items()}, indent=1))
-
 
 def vhp() -> None:
     jobs = []
@@ -177,7 +147,7 @@ def fetal() -> None:
     fetch_many(jobs, "fetal (KCL atlases on G-Node GIN)", workers=6)
 
 
-DATASETS = {"petct": petct, "lung4d": lung4d, "multiplex": multiplex, "vhp": vhp, "tracts": tracts, "fetal": fetal}
+DATASETS = {"petct": petct, "lung4d": lung4d, "vhp": vhp, "tracts": tracts, "fetal": fetal}
 
 
 def main() -> None:

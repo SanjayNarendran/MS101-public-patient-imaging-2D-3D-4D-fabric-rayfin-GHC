@@ -1,0 +1,16 @@
+{
+  "name": "@rayfin/ohif-extension",
+  "version": "1.0.0",
+  "description": "Rayfin Imaging: reads original DICOM files straight from a Microsoft Fabric Lakehouse (OneLake), no DICOMweb server",
+  "license": "MIT",
+  "private": true,
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "peerDependencies": {
+    "@cornerstonejs/tools": "*",
+    "@ohif/core": "workspace:*",
+    "@ohif/ui-next": "workspace:*",
+    "dcmjs": "*",
+    "react": "*"
+  }
+}

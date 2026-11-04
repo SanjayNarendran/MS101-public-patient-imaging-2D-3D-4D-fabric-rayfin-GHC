@@ -6,8 +6,11 @@ import {
   GLOSSARY,
   LICENCE_TERMS,
   MARKER_NOTES,
+  markerNote,
   MIP_COLOUR_NOTES,
   MULTIPLEX_BASICS,
+  OHIF_BASICS,
+  OHIF_TERMS,
   PATHOLOGY_BASICS,
   PATHOLOGY_CONTROLS,
   RENDER_PRESET_LABELS,
@@ -20,6 +23,7 @@ import {
   type ImageNote,
   type Term,
 } from '@/content/guide';
+import { AI_BASICS, CASE_TERMS, GENE_NOTES, OVERLAY_NOTES, STAGE_NOTES } from '@/content/caseGuide';
 import { useCatalog, useVolumeCatalog } from '@/hooks/useCatalog';
 import { studyPath } from '@/lib/volumes';
 
@@ -27,8 +31,11 @@ const CONTENTS = [
   ['pathology', 'Reading a slide'],
   ['markers', 'Fluorescence markers'],
   ['pathology-controls', 'Pathology controls'],
+  ['case', 'Patient record and genes'],
+  ['ai-layers', 'AI layers'],
   ['views', 'Ways to view a scan'],
   ['volume-controls', '3D and 4D controls'],
+  ['ohif', 'The OHIF tabs (DICOM)'],
   ['images', 'Each image explained'],
   ['licences', 'Licences'],
   ['glossary', 'Words you will see'],
@@ -126,7 +133,7 @@ export function Guide() {
           </div>
         </DocSection>
 
-        <DocSection id="markers" title="Fluorescence markers" intro="The marker chips above the colorectal CyCIF slide.">
+        <DocSection id="markers" title="Fluorescence markers" intro="All 36 channels of the colorectal CyCIF slide: the key-marker chips above it and the full list in Details › Controls.">
           <p className="t-muted max-w-[72ch] text-[14px]">{MULTIPLEX_BASICS}</p>
           <table className="data-table mt-6">
             <thead>
@@ -138,7 +145,7 @@ export function Guide() {
             </thead>
             <tbody>
               {markers.map(({ id, colour }) => {
-                const m = MARKER_NOTES[id];
+                const m = markerNote(id, '');
                 if (!m) return null;
                 return (
                   <tr key={id}>
@@ -160,6 +167,46 @@ export function Guide() {
         </DocSection>
 
         <DocSection
+          id="case"
+          title="Patient record and genes"
+          intro="Each H&E slide comes from a real, anonymous patient in The Cancer Genome Atlas. The banner, the filmstrip and the Case tab show what is known about them."
+        >
+          <Terms items={CASE_TERMS} />
+          <h3 className="t-label mb-2 mt-8">Stages</h3>
+          <Terms items={Object.entries(STAGE_NOTES).map(([term, text]) => ({ term: `Stage ${term}`, text }))} />
+          <h3 className="t-label mb-2 mt-8">Genes you will see</h3>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Gene</th>
+                <th>What it is</th>
+                <th>Why it matters</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(GENE_NOTES)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([gene, n]) => (
+                  <tr key={gene}>
+                    <td className="whitespace-nowrap font-medium">{gene}</td>
+                    <td>{n.name}</td>
+                    <td className="t-muted">{n.role}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </DocSection>
+
+        <DocSection id="ai-layers" title="AI layers" intro={AI_BASICS}>
+          <Terms
+            items={Object.values(OVERLAY_NOTES).flatMap((o) => [
+              { term: o.name, text: `${o.shows} ${o.how}` },
+              { term: `${o.name}: source`, text: `${o.source}. ${o.citation} Licence ${o.license}.` },
+            ])}
+          />
+        </DocSection>
+
+        <DocSection
           id="views"
           title="Ways to view a scan"
           intro="CT and MRI scanners record a stack of thin slices. The viewer can show them as flat slices or rebuild them in 3D."
@@ -175,6 +222,20 @@ export function Guide() {
           <Terms items={Object.entries(WINDOW_NOTES).map(([id, text]) => ({ term: WINDOW_LABELS[id] ?? id, text }))} />
           <h3 className="t-label mb-2 mt-8">MIP colours</h3>
           <Terms items={MIP_COLOUR_NOTES} />
+        </DocSection>
+
+        <DocSection
+          id="ohif"
+          title="The OHIF tabs (DICOM)"
+          intro="Pathology (OHIF) and 3D/4D (OHIF) open the original DICOM files in a standard medical image viewer."
+        >
+          <div className="t-muted max-w-[72ch] space-y-3 text-[14px]">
+            {OHIF_BASICS.map((p) => (
+              <p key={p}>{p}</p>
+            ))}
+          </div>
+          <h3 className="t-label mb-2 mt-8">Using the OHIF Viewer</h3>
+          <Terms items={OHIF_TERMS} />
         </DocSection>
 
         <DocSection id="images" title="Each image explained" intro="What each slide and scan shows, and what to try.">

@@ -14,6 +14,7 @@ import {
   type Slide,
   type TileAccess,
 } from '@/lib/catalog';
+import type { SlideOverlay } from '@/lib/cases';
 
 export interface ViewState {
   x: number;
@@ -31,8 +32,28 @@ export interface ViewerStatus {
   touring: boolean;
 }
 
+/**
+ * Position shared between linked viewers: the centre in units of the image width, and the real-world scale
+ * (micrometres per screen pixel) so both slides show the same magnification. `zoom` (viewport zoom) is the
+ * fallback when a slide has no recorded pixel size.
+ */
+export interface SyncView {
+  x: number;
+  y: number;
+  zoom: number;
+  umPerScreenPx: number | null;
+}
+
+export interface OverlayDisplay {
+  visible: boolean;
+  /** 0 to 1. */
+  opacity: number;
+}
+
 export interface SlideViewerHandle {
   home: () => void;
+  /** Moves to a linked viewer's position without reporting it back. */
+  syncTo: (view: SyncView) => void;
   zoomToMagnification: (mag: number) => void;
   getView: () => ViewState | null;
   flyTo: (view: ViewState) => void;
@@ -47,8 +68,11 @@ export interface ViewerPin {
   y: number;
 }
 
+/** The catalog slide, or another slide of the same case whose files live under `prefix`. */
+export type ViewerSlide = Slide & { prefix?: string; imageKey?: string; overlays?: SlideOverlay[] };
+
 interface SlideViewerProps {
-  slide: Slide;
+  slide: ViewerSlide;
   access: TileAccess;
   pins: ViewerPin[];
   onStatus: (status: ViewerStatus) => void;
@@ -57,6 +81,10 @@ interface SlideViewerProps {
   children?: ReactNode;
   /** Fluorescence slides: marker id -> shown. */
   channelVisibility?: Record<string, boolean>;
+  /** AI overlay id -> display; overlays not listed stay hidden. */
+  overlayDisplay?: Record<string, OverlayDisplay>;
+  /** Reports user-driven moves, for linked side-by-side viewing. */
+  onViewChange?: (view: SyncView) => void;
 }
 
 const NORMAL_ANIMATION = 1.2;
@@ -72,23 +100,28 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
-/** `tilesPath` is relative to the slide folder: `slide_files` or `channels/<marker>/slide_files`. */
+/**
+ * `tilesPath` is relative to the catalog slide's folder: `slide_files`, `channels/<marker>/slide_files`,
+ * `case/<image>/slide_files` or an overlay pyramid. `pyramid` overrides the tile grid (overlays).
+ */
 function buildTileSource(
-  slide: Slide,
+  slide: ViewerSlide,
   accessRef: { current: TileAccess },
-  tilesPath = 'slide_files'
+  tilesPath = `${slide.prefix ?? ''}slide_files`,
+  pyramid: { tileSize?: number; minLevel?: number; format?: string } = {}
 ): OpenSeadragon.TileSource {
+  const format = pyramid.format ?? slide.format;
   const source = new OpenSeadragon.TileSource({
     width: slide.width,
     height: slide.height,
-    tileSize: slide.tileSize,
+    tileSize: pyramid.tileSize ?? slide.tileSize,
     tileOverlap: slide.overlap,
-    minLevel: 0,
+    minLevel: pyramid.minLevel ?? 0,
     maxLevel: slide.levels - 1,
   } as unknown as OpenSeadragon.TileSourceOptions);
 
   source.getTileUrl = (level: number, x: number, y: number) =>
-    lakehouseUrl(accessRef.current, slide, `${tilesPath}/${level}/${x}_${y}.${slide.format}`);
+    lakehouseUrl(accessRef.current, slide, `${tilesPath}/${level}/${x}_${y}.${format}`);
 
   type Job = {
     src: string;
@@ -127,7 +160,7 @@ function buildTileSource(
 }
 
 export const SlideViewer = forwardRef<SlideViewerHandle, SlideViewerProps>(function SlideViewer(
-  { slide, access, pins, onStatus, onPinClick, onAccessExpired, children, channelVisibility },
+  { slide, access, pins, onStatus, onPinClick, onAccessExpired, children, channelVisibility, overlayDisplay, onViewChange },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -135,6 +168,13 @@ export const SlideViewer = forwardRef<SlideViewerHandle, SlideViewerProps>(funct
   const accessRef = useRef(access);
   const channelVisRef = useRef(channelVisibility);
   channelVisRef.current = channelVisibility;
+  const overlayDisplayRef = useRef(overlayDisplay);
+  overlayDisplayRef.current = overlayDisplay;
+  const overlayItems = useRef(new Map<string, OpenSeadragon.TiledImage>());
+  const onViewChangeRef = useRef(onViewChange);
+  onViewChangeRef.current = onViewChange;
+  /** When this viewer last followed its linked partner; its own moves are not reported back meanwhile. */
+  const lastSyncAt = useRef(0);
   const statusRef = useRef<ViewerStatus>({
     magnification: null,
     umPerPixel: null,
@@ -191,8 +231,9 @@ export const SlideViewer = forwardRef<SlideViewerHandle, SlideViewerProps>(funct
             opacity: (channelVisRef.current?.[ch.id] ?? ch.visible) ? 1 : 0,
           }))
         : buildTileSource(slide, accessRef)) as unknown as OpenSeadragon.TileSourceOptions,
-      // Composite operations need the canvas drawer.
-      ...(slide.channels?.length ? { drawer: 'canvas' } : {}),
+      // Composite operations need the canvas drawer. So do semi-transparent AI layers: the WebGL drawer blends
+      // tiles as premultiplied alpha, which turns a faint overlay tint nearly opaque.
+      ...(slide.channels?.length || slide.overlays?.length ? { drawer: 'canvas' } : {}),
       showNavigationControl: false,
       showNavigator: true,
       navigatorPosition: 'BOTTOM_LEFT',
@@ -230,8 +271,64 @@ export const SlideViewer = forwardRef<SlideViewerHandle, SlideViewerProps>(funct
     };
 
     let failuresSinceRefresh = 0;
+    let destroyed = false;
+    const overlaySet = new Set<unknown>();
+    const overlayOpacity = (id: string) => {
+      const d = overlayDisplayRef.current?.[id];
+      return d?.visible ? d.opacity : 0;
+    };
+    // AI layers go on top of the slide once it has opened; hidden layers load no tiles.
+    const addOverlays = () => {
+      for (const o of slide.overlays ?? []) {
+        const add = (tileSource: unknown, width?: number) =>
+          viewer.addTiledImage({
+            tileSource: tileSource as OpenSeadragon.TileSourceOptions,
+            x: 0,
+            y: 0,
+            ...(width ? { width } : {}),
+            opacity: overlayOpacity(o.id),
+            success: (e: { item: OpenSeadragon.TiledImage }) => {
+              overlaySet.add(e.item);
+              overlayItems.current.set(o.id, e.item);
+              e.item.setOpacity(overlayOpacity(o.id));
+            },
+          } as unknown as OpenSeadragon.TiledImageOptions);
+        if (o.kind === 'tiled' && o.prefix) {
+          add(
+            buildTileSource(slide, accessRef, `${slide.prefix ?? ''}${o.prefix}slide_files`, {
+              tileSize: o.tileSize,
+              minLevel: o.minLevel,
+              format: o.format ?? 'png',
+            })
+          );
+        } else if (o.kind === 'image' && o.file && o.width) {
+          const url = lakehouseUrl(accessRef.current, slide, `${slide.prefix ?? ''}${o.file}`);
+          const width = o.width / slide.width;
+          if (url.startsWith(PROXY_SCHEME)) {
+            void loadViaProxy(url).then((dataUrl) => !destroyed && add({ type: 'image', url: dataUrl }, width));
+          } else {
+            add({ type: 'image', url, crossOriginPolicy: 'Anonymous' }, width);
+          }
+        }
+      }
+    };
+
+    const reportView = () => {
+      const report = onViewChangeRef.current;
+      if (!report) return;
+      // Moves that echo the linked viewer would fight it while its animation is still running.
+      if (performance.now() - lastSyncAt.current < 500) return;
+      const c = viewer.viewport.getCenter(true);
+      const zoom = viewer.viewport.getZoom(true);
+      const item = viewer.world.getItemAt(0);
+      const imageZoom = item?.viewportToImageZoom(zoom);
+      report({ x: c.x, y: c.y, zoom, umPerScreenPx: slide.mpp && imageZoom ? slide.mpp / imageZoom : null });
+    };
+
     viewer.addHandler('animation', updateZoom);
+    viewer.addHandler('animation', reportView);
     viewer.addHandler('open', updateZoom);
+    viewer.addHandler('open', addOverlays);
     viewer.addHandler('resize', updateZoom);
     viewer.addHandler('tile-loaded', () => {
       failuresSinceRefresh = 0;
@@ -242,7 +339,8 @@ export const SlideViewer = forwardRef<SlideViewerHandle, SlideViewerProps>(funct
     });
     viewer.addHandler('canvas-press', () => tourRef.current?.abort());
     viewer.addHandler('canvas-scroll', () => tourRef.current?.abort());
-    viewer.addHandler('tile-load-failed', () => {
+    viewer.addHandler('tile-load-failed', (e) => {
+      if (overlaySet.has((e as unknown as { tiledImage: unknown }).tiledImage)) return;
       emit({ tilesFailed: statusRef.current.tilesFailed + 1 });
       failuresSinceRefresh += 1;
       if (failuresSinceRefresh === 6) onExpiredRef.current?.();
@@ -250,12 +348,21 @@ export const SlideViewer = forwardRef<SlideViewerHandle, SlideViewerProps>(funct
 
     return () => {
       tourRef.current?.abort();
+      destroyed = true;
+      overlayItems.current.clear();
       viewer.destroy();
       viewerRef.current = null;
     };
-    // The viewer is rebuilt only when the slide changes; access changes are read through accessRef.
+    // The viewer is rebuilt only when the slide or case image changes; access changes are read through accessRef.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slide.id]);
+  }, [slide.id, slide.imageKey]);
+
+  useEffect(() => {
+    for (const [id, item] of overlayItems.current) {
+      const d = overlayDisplay?.[id];
+      item.setOpacity(d?.visible ? d.opacity : 0);
+    }
+  }, [overlayDisplay]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -300,6 +407,15 @@ export const SlideViewer = forwardRef<SlideViewerHandle, SlideViewerProps>(funct
 
   useImperativeHandle(ref, () => ({
     home: () => viewerRef.current?.viewport.goHome(),
+    syncTo: (view: SyncView) => {
+      const viewer = viewerRef.current;
+      if (!viewer) return;
+      lastSyncAt.current = performance.now();
+      const item = viewer.world.getItemAt(0);
+      const zoom = view.umPerScreenPx && slide.mpp && item ? item.imageToViewportZoom(slide.mpp / view.umPerScreenPx) : view.zoom;
+      viewer.viewport.zoomTo(zoom, undefined, true);
+      viewer.viewport.panTo(new OpenSeadragon.Point(view.x, view.y), true);
+    },
     zoomToMagnification: (mag: number) => {
       if (!slide.objectivePower) return;
       zoomToImageZoom(mag / slide.objectivePower);

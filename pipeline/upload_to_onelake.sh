@@ -18,6 +18,11 @@ COMMON=(--recursive --overwrite=ifSourceNewer --trusted-microsoft-suffixes=onela
 azcopy copy "${ROOT}/work/lakehouse/slides" "${DEST}/" "${COMMON[@]}" --content-type=image/jpeg \
   --include-pattern="*.jpg"
 azcopy copy "${ROOT}/work/lakehouse/slides" "${DEST}/" "${COMMON[@]}" --include-pattern="*.dzi;*.json"
+# Case context: AI overlay tiles (PNG) and pathology reports (PDF) from pipeline/build_cases.py.
+azcopy copy "${ROOT}/work/lakehouse/slides" "${DEST}/" "${COMMON[@]}" --content-type=image/png \
+  --include-pattern="*.png"
+azcopy copy "${ROOT}/work/lakehouse/slides" "${DEST}/" "${COMMON[@]}" --content-type=application/pdf \
+  --include-pattern="*.pdf"
 azcopy copy "${ROOT}/work/lakehouse/manifest.json" "${DEST}/manifest.json" \
   --overwrite=true --trusted-microsoft-suffixes=onelake.blob.fabric.microsoft.com --content-type=application/json
 

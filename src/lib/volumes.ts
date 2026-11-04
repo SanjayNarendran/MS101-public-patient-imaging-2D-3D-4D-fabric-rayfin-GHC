@@ -1,4 +1,5 @@
 import type { AppFunctionsSchema } from '../../rayfin/functions/src/types';
+import { fetchLocalVolumeCatalog, LOCAL_DATA } from '@/lib/localData';
 import { getRayfinClient } from '@/services/rayfin/RayfinClientService';
 
 export type VolumeCatalog = AppFunctionsSchema['getVolumeCatalog']['output'];
@@ -7,6 +8,7 @@ export type VolumeLayer = VolumeStudy['layers'][number];
 export type FolderAccess = VolumeCatalog['access'];
 
 export async function fetchVolumeCatalog(): Promise<VolumeCatalog> {
+  if (LOCAL_DATA) return fetchLocalVolumeCatalog();
   return getRayfinClient().functions.getVolumeCatalog.invoke(undefined, { timeoutMs: 60_000 });
 }
 

@@ -31,6 +31,8 @@ const FILES_PATH = `${LAKEHOUSE_ID}/Files`;
 /** Read-only SAS scopes: the tile pyramids and the browser-ready volumes, never the raw sources. */
 const SLIDES_SCOPE = 'slides';
 const VOLUMES_SCOPE = 'volumes';
+/** Original DICOM files and their sidecar indexes for the OHIF tabs (pipeline/dicom/build_dicom.py). */
+const DICOM_SCOPE = 'dicom';
 const SAS_LIFETIME_MS = 55 * 60_000;
 const SAS_REUSE_MS = 40 * 60_000;
 const MAX_TILES_PER_CALL = 24;
@@ -43,6 +45,8 @@ export type SlideChannel = {
   id: string;
   name: string;
   meaning: string;
+  /** `featured`: a chip above the viewer; `protein`: other markers; `reference`: DNA rounds and background controls. */
+  group?: 'featured' | 'protein' | 'reference';
   /** Display colour the tiles were rendered in, e.g. #2ee86a. */
   color: string;
   visible: boolean;
@@ -52,8 +56,152 @@ export type SlideChannel = {
   tilesBytes: number;
 };
 
+/** A public AI analysis drawn over a slide (NCI Imaging Data Commons, CC BY 4.0). */
+export type SlideOverlay = {
+  /** `nuclei`: outline of every cell nucleus; `til`: map of tumour-infiltrating immune cells. */
+  id: string;
+  /** `tiled`: a transparent PNG Deep Zoom pyramid; `image`: one PNG laid over the slide. */
+  kind: string;
+  seriesUid: string;
+  /** Tiled: path of the pyramid folder relative to the slide image folder, e.g. `overlays/nuclei/`. */
+  prefix?: string;
+  format?: string;
+  tileSize?: number;
+  /** Lowest pyramid level that exists; below it the layer is too fine to see. */
+  minLevel?: number;
+  levels?: number;
+  tileCount?: number;
+  drawnTiles?: number;
+  tilesBytes?: number;
+  /** Nuclei: polygons in the published annotation. */
+  count?: number | null;
+  /** Image: file relative to the slide image folder, and its width in slide pixels (top-left aligned). */
+  file?: string;
+  width?: number;
+  patchUm?: number;
+  patches?: number;
+  positivePatches?: number;
+  tissuePatches?: number;
+  bytes?: number;
+};
+
+/** One glass slide from a patient's case. `main` is the slide listed in the catalog. */
+export type CaseImage = {
+  key: string;
+  barcode: string;
+  label: string;
+  /** `Tumour`, `Normal tissue`, `Metastasis`, ... */
+  sample: string;
+  /** `FFPE` (diagnostic, formalin-fixed) or `Frozen`. */
+  preparation: string;
+  section?: string | null;
+  /** Pathologist's estimate for this section, in percent (tumourCells, stroma, necrosis, lymphocytes, ...). */
+  composition: Record<string, number>;
+  overlays: SlideOverlay[];
+  /** Folder of this slide's pyramid relative to the catalog slide's folder, e.g. `case/11a-ts1/`; absent for `main`. */
+  prefix?: string;
+  gdcFileId?: string;
+  sourceUrl?: string;
+  sourceFile?: string;
+  width?: number;
+  height?: number;
+  levels?: number;
+  tileSize?: number;
+  overlap?: number;
+  format?: string;
+  tileCount?: number;
+  tilesBytes?: number;
+  objectivePower?: number | null;
+  mpp?: number | null;
+  hotspots?: { x: number; y: number }[];
+  rawSizeBytes?: number;
+};
+
+export type CasePatient = {
+  caseId: string;
+  project: string;
+  projectName: string;
+  primarySite: string | null;
+  diseaseType: string | null;
+  sex: string | null;
+  ageAtDiagnosis: number | null;
+  yearOfDiagnosis: number | null;
+  primaryDiagnosis: string | null;
+  morphology: string | null;
+  tissueOrigin: string | null;
+  site: string | null;
+  stage: string | null;
+  stagingSystem: string;
+  t: string | null;
+  n: string | null;
+  m: string | null;
+  grade: string | null;
+  /** Prostate: Gleason score with its two patterns, e.g. `7 (3 + 4)`. */
+  gleason: string | null;
+  priorMalignancy: string | null;
+  priorCancers: string[];
+  treatments: string[];
+  vitalStatus: string | null;
+  survivalYears: number | null;
+  followUpYears: number | null;
+  gdcCaseUrl: string;
+};
+
+export type CaseMutation = { gene: string; change: string; type: string; impact: string; dna: string };
+
+export type CaseGenomics = {
+  /** Protein-changing mutations in Cancer Gene Census genes. */
+  mutations: CaseMutation[];
+  mutationCount: number;
+  proteinChangingCount: number;
+  copyNumber: {
+    method: string | null;
+    genesMeasured: number;
+    /** Typical copies per gene in this tumour (2 in a normal cell). */
+    ploidy: number;
+    /** Copies from which a gene counts as amplified (over twice the ploidy, at least 6). */
+    amplifiedFrom: number;
+    fractionAltered: number;
+    calls: { gene: string; copies: number; call: string; chromosome: string | null }[];
+    callsTotal: number;
+  } | null;
+  expression: {
+    method: string;
+    genesMeasured: number;
+    panel: { gene: string; tpm: number; percentile: number }[];
+  } | null;
+};
+
+export type CaseInfo = {
+  patient: CasePatient;
+  genomics: CaseGenomics;
+  report: { file: string; bytes: number; gdcFileId: string; sourceUrl: string } | null;
+  /** Every open-access file the GDC holds for this case, grouped by kind. */
+  published: { type: string; category: string | null; files: number; bytes: number }[];
+  images: CaseImage[];
+};
+
+/** A case's study in the OHIF tabs: the patient, date and type the OHIF study list shows. */
+export type DicomStudyRef = {
+  studyInstanceUid: string;
+  /** DICOM PatientName, shown in OHIF's Patient column. */
+  patientName: string;
+  /** DICOM PatientID (the MRN). */
+  patientId: string;
+  /** DICOM StudyDate (YYYYMMDD) and StudyTime (HHMMSS). */
+  studyDate: string;
+  studyTime: string;
+  /** ModalitiesInStudy joined with a backslash, as OHIF shows them, e.g. `ANN\SM`. */
+  modalities: string;
+  description: string;
+};
+
 export type SlideInfo = {
   id: string;
+  /** Patient record, genomics, report, the case's other slides and AI overlays (TCGA slides). */
+  caseInfo?: CaseInfo;
+  /** The same case as original DICOM in the OHIF tab (from pipeline/dicom/build_dicom.py). */
+  study?: DicomStudyRef;
   /** `brightfield` (default, H&E) or `fluorescence` (multiplexed, one tiled image per marker). */
   kind?: string;
   license?: string;
@@ -165,6 +313,8 @@ export type VolumeStudy = {
   citation: string;
   subject: string;
   patientId?: string;
+  /** The same study as original DICOM in the 3D/4D (OHIF) tab, when its source is DICOM. */
+  study?: DicomStudyRef;
   scanner?: string;
   thumbnail: string;
   rawPath: string;
@@ -359,8 +509,40 @@ udf.func(
   [],
 );
 
+/**
+ * Read-only access to Files/dicom for the OHIF tabs: the browser reads the original .dcm files (and byte ranges of
+ * them, one slide tile per request) straight from OneLake, so no DICOMweb server is involved.
+ * Runs as the Fabric app identity.
+ */
+udf.func(
+  'getDicomAccess',
+  async (ctx: RayfinContext<AppSchema, AudienceType.Storage>): Promise<FolderAccess> => {
+    const token = ctx.Tokens.Storage;
+    try {
+      const sas = await signFolderSas(token, DICOM_SCOPE);
+      return {
+        baseUrl: `${ONELAKE_BLOB}/${WORKSPACE_ID}/${FILES_PATH}/${DICOM_SCOPE}`,
+        query: sas.query,
+        expiresOn: new Date(sas.expiresOn).toISOString(),
+        reason: 'Short-lived read-only OneLake SAS scoped to Files/dicom',
+      };
+    } catch (error) {
+      console.error('OneLake SAS unavailable for DICOM', error);
+      return {
+        baseUrl: '',
+        query: '',
+        expiresOn: '',
+        reason: error instanceof Error ? error.message : String(error),
+      };
+    }
+  },
+  [],
+);
+
 const SLIDE_ID = /^[a-z0-9-]{1,64}$/;
-const TILE_PATH = /^((channels\/[a-z0-9-]{1,64}\/)?slide_files\/\d{1,2}\/\d{1,5}_\d{1,5}\.jpg|thumbnail\.jpg)$/;
+const TILE_PATH =
+  /^((channels\/[a-z0-9-]{1,64}\/|case\/[a-z0-9-]{1,32}\/)?(slide_files\/\d{1,2}\/\d{1,5}_\d{1,5}\.jpg|thumbnail\.jpg|overlays\/nuclei\/slide_files\/\d{1,2}\/\d{1,5}_\d{1,5}\.png|overlays\/til\.png)|report\.pdf)$/;
+const CONTENT_TYPES: Record<string, string> = { jpg: 'image/jpeg', png: 'image/png', pdf: 'application/pdf' };
 
 /**
  * Fallback tile proxy: returns a small batch of tiles for one slide as base64 JPEGs.
@@ -384,7 +566,7 @@ udf.func(
       paths.map(async (path) => {
         const response = await readOneLake(token, `slides/${slideId}/${path}`);
         const bytes = Buffer.from(await response.arrayBuffer());
-        return { path, contentType: 'image/jpeg', data: bytes.toString('base64') };
+        return { path, contentType: CONTENT_TYPES[path.split('.').pop() ?? ''] ?? 'application/octet-stream', data: bytes.toString('base64') };
       }),
     );
   },
